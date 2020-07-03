@@ -1,11 +1,6 @@
 # Shape from Silhouette
 
+Forked from [zinsmatt](https://github.com/zinsmatt/SpaceCarving).
+Added marching cubes with [PyMCubes](https://github.com/pmneila/PyMCubes) and visualisation with [Open3D](http://www.open3d.org/docs/0.8.0/index.html).
 
-This is an example of 3D reconstruction by space carving. The results below were obtained from 36 images.
-
-
-![Reconstruction](doc/shape_mesh.gif)
-![Reconstruction](doc/shape_pc.gif)
-
-## Input images
-![Input Images](doc/input_images.png)
+![Example of result](doc/res_scrsht.png)
