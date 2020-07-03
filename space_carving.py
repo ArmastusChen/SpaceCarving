@@ -8,7 +8,8 @@ import scipy.io
 import numpy as np
 import cv2
 import glob
-import matplotlib.pyplot as plt
+import open3d as o3d
+import mcubes
 
 # Load camera matrices
 data = scipy.io.loadmat("data/dino_Ps.mat")
@@ -40,8 +41,9 @@ for im in images:
     im = cv2.morphologyEx(im, cv2.MORPH_OPEN, kernel)
     silhouette.append(im)
 
-#    plt.figure()
-#    plt.imshow(im)
+    # plt.figure()
+    # plt.imshow(im)
+    # plt.show()
     
 #%%
 # create voxel grid
@@ -76,55 +78,20 @@ for P, im in zip(projections, silhouette):
     fill[indices] = res 
     
     filled.append(fill)
+
 filled = np.vstack(filled)
 
 # the occupancy is computed as the number of camera in which the point "seems" not empty
 occupancy = np.sum(filled, axis=0)
 
-# Select occupied voxels
-pts = pts.T
-good_points = pts[occupancy > 4, :]
-    
+# Marching cubes
+occ = occupancy.reshape((120, 120, 120))
+vertices, triangles = mcubes.marching_cubes(occ, 30)
 
-        
-#%% save point cloud with occupancy scalar 
-filename = "shape.txt"
-with open(filename, "w") as fout:
-    fout.write("x,y,z,occ\n")
-    for occ, p in zip(occupancy, pts[:, :3]):
-        fout.write(",".join(p.astype(str)) + "," + str(occ) + "\n")
-        
+# Visualisation with open3d
+mesh = o3d.geometry.TriangleMesh()
+mesh.triangles = o3d.utility.Vector3iVector(triangles)
+mesh.vertices = o3d.utility.Vector3dVector(vertices)
+mesh.compute_vertex_normals()
 
-
-
-
-    
-#%% save as rectilinear grid (this enables paraview to display its iso-volume as a mesh)
-import vtk
-
-xCoords = vtk.vtkFloatArray()
-x = pts[::s*s, 0]
-y = pts[:s*s:s, 1]
-z = pts[:s, 2]
-for i in x:
-    xCoords.InsertNextValue(i)
-yCoords = vtk.vtkFloatArray()
-for i in y:
-    yCoords.InsertNextValue(i)
-zCoords = vtk.vtkFloatArray()
-for i in z:
-    zCoords.InsertNextValue(i)
-values = vtk.vtkFloatArray()
-for i in occupancy:
-    values.InsertNextValue(i)
-rgrid = vtk.vtkRectilinearGrid()
-rgrid.SetDimensions(len(x), len(y), len(z))
-rgrid.SetXCoordinates(xCoords)
-rgrid.SetYCoordinates(yCoords)
-rgrid.SetZCoordinates(zCoords)
-rgrid.GetPointData().SetScalars(values)
-
-writer = vtk.vtkXMLRectilinearGridWriter()
-writer.SetFileName("shape.vtr")
-writer.SetInputData(rgrid)
-writer.Write()
+o3d.visualization.draw_geometries([mesh])
